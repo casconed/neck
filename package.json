@@ -1,22 +1,33 @@
 {
   "name": "neck",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "src/main.tsx",
   "dependencies": {
-    "expo": "~58.0.26",
-    "expo-status-bar": "~58.0.5",
+    "@types/react-dom": "^19.3.0",
+    "fflate": "^0.8.3",
     "react": "19.3.0",
-    "react-native": "0.88.1"
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@types/react": "~19.3.0",
-    "typescript": "~6.0.3"
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "oracle": "python3 tools/oracle.py"
   },
-  "private": true
+  "private": true,
+  "type": "module"
 }

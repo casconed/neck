@@ -1,0 +1,37 @@
+:root {
+  --bg: #111; --panel: #1a1a1a; --line: #333; --text: #ddd; --dim: #888;
+  --accent: #f5a623; --manual: #4a90e2; --warn: #e2584a; --partial: #b8a04a; --step: #2a2a2a;
+  --mono: ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+body { margin: 0; background: var(--bg); color: var(--text); font: 13px var(--mono); }
+#root { padding: 16px; display: grid; gap: 10px; max-width: 1400px; }
+h1 { font-size: 16px; margin: 0; }
+.dim { color: var(--dim); font-size: 12px; }
+.partial { color: var(--partial); }
+.error { color: var(--warn); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.label { width: 92px; flex: none; color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; }
+button { background: none; border: 1px solid #555; color: var(--text); font: inherit; padding: 3px 8px; cursor: pointer; }
+button:disabled { opacity: 0.4; cursor: default; }
+button.danger { border-color: var(--warn); color: var(--warn); }
+input, select { background: #222; color: var(--text); border: 1px solid #444; font: inherit; padding: 2px 4px; }
+input.num { width: 48px; }
+.track { border-top: 1px solid var(--line); padding: 8px 0; display: grid; gap: 6px; }
+.track.muted { opacity: 0.6; }
+.fields { display: flex; flex-wrap: wrap; gap: 4px 14px; padding-left: 98px; }
+.steps { display: flex; align-items: center; gap: 6px; padding-left: 98px; }
+.steps.inactive { opacity: 0.3; }
+.steps .cells { display: flex; gap: 1px; }
+.step { width: 12px; height: 18px; padding: 0; border: 0; background: var(--step); }
+.step:nth-child(16n + 1) { margin-left: 5px; }
+.step.past { opacity: 0.3; }
+.step.generated { background: var(--accent); }
+.step.manual { background: var(--manual); }
+.step.removed { background: var(--step); outline: 1px dashed var(--accent); }
+.legend span { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; }
+.legend .generated { background: var(--accent); } .legend .manual { background: var(--manual); }
+.remove-cycle { color: var(--warn); border: 0; padding: 0 4px; }
+details.notice { color: var(--partial); font-size: 12px; }
+.pattern { display: flex; gap: 4px; align-items: center; }
+.pattern .active { border-color: var(--accent); color: var(--accent); }

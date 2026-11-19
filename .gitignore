@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# T-1 files from your own device: never publish them
+fixtures/local/
+fixtures/expected/local__*
