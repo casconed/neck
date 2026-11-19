@@ -28,7 +28,6 @@ input.num { width: 48px; }
 .step.past { opacity: 0.3; }
 .step.generated { background: var(--accent); }
 .step.manual { background: var(--manual); }
-.step.removed { background: var(--step); outline: 1px dashed var(--accent); }
 .legend span { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; }
 .legend .generated { background: var(--accent); } .legend .manual { background: var(--manual); }
 .remove-cycle { color: var(--warn); border: 0; padding: 0 4px; }

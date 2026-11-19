@@ -30,8 +30,8 @@ const names = (xs: string[]): [number, string][] => xs.map((x, i) => [i, x]);
 export const FIELDS: FieldDef[] = [
   { name: "steps", off: 0x00, kind: "u8", min: 1, max: 64 },
   { name: "cycles", off: 0x14d, kind: "u8", min: 1, max: 16 },
-  { name: "pulses", off: 0x15, kind: "u8", min: 0, max: 64, partial: "located upstream, not confirmed" },
-  { name: "rotate", off: 0x13a, kind: "u8", min: 0, max: 63, partial: "direction unconfirmed" },
+  { name: "pulses", off: 0x15, kind: "u8", min: 0, max: 64 },  // matches generated steps on all sample tracks
+  { name: "rotate", off: 0x13a, kind: "u8", min: 0, max: 63 }, // rotates the generated pattern right
   { name: "division", off: 0x2a, kind: "ticks", options: DIVISIONS },
   { name: "repeats", off: 0xfa, kind: "plus1", min: 0, max: 48, partial: "stored as repeats+1" },
   { name: "time", off: 0x124, kind: "ticks", options: DIVISIONS, partial: "repeat spacing" },

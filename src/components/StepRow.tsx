@@ -1,8 +1,7 @@
 import { memo } from "react";
 
-/** Step byte: bit1 = generated pulse, bit0 = manual toggle; plays when exactly one is set (inferred). */
-const look = (v: number) =>
-  (v & 3) === 2 ? "generated" : (v & 3) === 1 ? "manual" : (v & 3) === 3 ? "removed" : "";
+/** Generated pulses (bit1) show orange, hand-added ones (bit0 only) blue. Either plays. */
+const look = (v: number) => (v & 2 ? "generated" : v & 1 ? "manual" : "");
 
 export const StepRow = memo(function StepRow({ label, steps, length, inactive, onToggle, onRemove }: {
   label: string; steps: Uint8Array; length: number; inactive?: boolean;

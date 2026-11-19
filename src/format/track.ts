@@ -115,8 +115,11 @@ export const channelMask = (chs: number[]): number => chs.reduce((m, c) => m | (
 
 // ---- steps ---------------------------------------------------------------------------------
 
-/** Step byte: bit1 = generated pulse, bit0 = manual toggle (inferred). Plays when exactly one is set. */
-export const plays = (v: number): boolean => (((v >> 1) ^ v) & 1) === 1;
+/**
+ * Step byte: bit1 = pulse generated from pulses/rotate/steps, bit0 = pulse added by hand. A step
+ * plays when either is set (hardware-checked: setting bit0 on a generated step doesn't silence it).
+ */
+export const plays = (v: number): boolean => (v & 3) !== 0;
 
 /** Step bytes for the base pattern (cycle = -1) or a stored cycle record. */
 export const stepBytes = (body: Bytes, cycle = -1): Bytes => {
@@ -126,14 +129,52 @@ export const stepBytes = (body: Bytes, cycle = -1): Bytes => {
   return body.subarray(off, off + GATE_LEN);
 };
 
-/** Flip a step's manual bit (what pressing the step on the device does). */
+/** Turn a step off (clearing both its generated and manual bits) or on (as a manual pulse). */
 export const toggleStep = (body: Bytes, cycle: number, step: number): Bytes => {
   const l = layout(body);
   const off = (cycle < 0 ? l.gate : l.records.find((r) => r.idx === cycle)?.gate);
   if (off === undefined) throw new FormatError(`cycle ${cycle + 1} has no stored steps`);
   const out = body.slice();
-  out[off + step] ^= 1;
+  out[off + step] = plays(out[off + step]) ? out[off + step] & ~3 : out[off + step] | 1;
   return out;
+};
+
+// ---- generated rhythm ----------------------------------------------------------------------
+
+/**
+ * The T-1's pulse generator: step i is a pulse when ((i - rotate) * pulses) mod steps < pulses.
+ * Reproduces the stored generated bits of all 982 sample tracks without cycle data, so it's the
+ * device's own algorithm (a Bresenham-style Euclidean rhythm, rotated right), not just a close one.
+ */
+export const euclid = (pulses: number, steps: number, rotate: number): boolean[] => {
+  const k = Math.min(pulses, steps);
+  return Array.from({ length: steps }, (_, i) => ((((i - rotate) * k) % steps) + steps) % steps < k);
+};
+
+/** Settings the generated pulses depend on; the device doesn't redraw them on load, so we must. */
+export const SHAPE_FIELDS = new Set(["pulses", "rotate", "steps"]);
+const SHAPE_PARAM_IDS = new Set([0x00, 0x02, 0x1d]); // per-cycle steps / pulses / rotate
+
+/**
+ * Redraw the generated bits (bit1) of the base steps, and of every stored cycle that has no
+ * steps/pulses/rotate override of its own, from the track's settings. Manual pulses (bit0) stay.
+ */
+export const regenerate = (body: Bytes): Bytes => {
+  const l = layout(body), out = body.slice();
+  const read = (name: string) => out[l.steps + FIELD_OFFSETS[name]];
+  const pattern = euclid(read("pulses"), read("steps"), read("rotate"));
+  const draw = (gate: number) => pattern.forEach((on, i) => { out[gate + i] = on ? out[gate + i] | 2 : out[gate + i] & ~2; });
+  draw(l.gate);
+  const params = cycleParams(body);
+  for (const r of l.records) if (!params.some((p) => p.cycle === r.idx && SHAPE_PARAM_IDS.has(p.id))) draw(r.gate);
+  return out;
+};
+const FIELD_OFFSETS: Record<string, number> = { steps: 0x00, pulses: 0x15, rotate: 0x13a };
+
+/** Set a track setting; pulses/rotate/steps also redraw the generated pulses to match. */
+export const setField = (body: Bytes, f: FieldDef, v: number): Bytes => {
+  const out = writeField(body, f, v);
+  return SHAPE_FIELDS.has(f.name) ? regenerate(out) : out;
 };
 
 // ---- notes ---------------------------------------------------------------------------------

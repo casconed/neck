@@ -3,7 +3,7 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  FIELDS, Project, addCycleRecord, autosaveToBank, putPattern, bankSlot, copyPattern, copyTrack, cycleParams, layout, parse, patternsOf,
+  FIELDS, Project, addCycleRecord, autosaveToBank, euclid, field, plays, putPattern, setField, stepBytes, bankSlot, copyPattern, copyTrack, cycleParams, layout, parse, patternsOf,
   readField, readZip, removeCycleRecord, removePattern, removeTrack, serialize, setNotes, setTempo, tempo,
   toggleStep, writeBackup, writeField,
 } from "..";
@@ -65,11 +65,24 @@ describe.each(nonEmpty)("track edits: $name", ({ proj }) => {
     }
   });
 
-  it("toggling a step twice is a no-op, on the base and on stored cycles", () => {
+  it("clicking a step flips whether it plays, on the base and on stored cycles", () => {
     for (const { body } of all) for (const c of [-1, ...layout(body).records.map((r) => r.idx)]) {
-      const once = toggleStep(body, c, 5);
-      expect(Buffer.from(once).equals(Buffer.from(body))).toBe(false);
-      expect(Buffer.from(toggleStep(once, c, 5)).equals(Buffer.from(body))).toBe(true);
+      const before = stepBytes(body, c)[5], once = toggleStep(body, c, 5), after = stepBytes(once, c)[5];
+      expect(plays(after)).toBe(!plays(before));
+      expect(after & ~3).toBe(before & ~3);                          // other flag bits untouched
+      if (plays(before)) expect(after & 3).toBe(0);                  // off clears generated and manual
+      else expect(after & 3).toBe(1);                                // on = a manual pulse
+      expect(plays(stepBytes(toggleStep(once, c, 5), c)[5])).toBe(plays(before));
+    }
+  });
+
+  it("changing pulses, rotate or steps redraws the generated pulses and keeps manual ones", () => {
+    for (const { body } of all.slice(0, 6)) {
+      const out = setField(setField(setField(body, field("steps"), 12), field("pulses"), 5), field("rotate"), 2);
+      const l = layout(out), want = euclid(5, 12, 2);
+      want.forEach((on, i) => expect(!!(out[l.gate + i] & 2), `step ${i + 1}`).toBe(on));
+      const lb = layout(body);
+      for (let i = 0; i < 64; i++) expect(out[l.gate + i] & 1).toBe(body[lb.gate + i] & 1);
     }
   });
 
@@ -173,5 +186,24 @@ describe.runIf(existsSync(REAL_BACKUP))("real Config-app backup", () => {
     expect(Object.keys(out)).toEqual(Object.keys(base));
     for (const n of Object.keys(base)) if (n !== "./1.t1") expect(Buffer.from(out[n]).equals(Buffer.from(base[n])), n).toBe(true);
     expect(tempo(parse(out["./1.t1"]))).toBe(99);
+  });
+});
+
+describe("the T-1's pulse generator", () => {
+  // Every upstream sample track without per-cycle data: the stored generated bits must equal
+  // euclid(pulses, steps, rotate). Captures from a device can deviate where steps were edited by hand:
+  // removing a generated pulse on the T-1 clears its bit and lowers the pulse count without redrawing
+  // the rest (seen in local/autosave-a, tracks 12 and 14), so those aren't part of this check.
+  const tracks = nonEmpty.filter((f) => f.name.startsWith("upstream/"))
+    .flatMap((f) => patternsOf(f.proj).flatMap((p) => p.tracks.map((t) => ({ name: f.name, body: t.body }))))
+    .filter(({ body }) => !layout(body).records.length && !cycleParams(body).length);
+  it(`matches the stored pattern on all ${tracks.length} tracks without cycle data`, () => {
+    const misses = tracks.filter(({ body }) => {
+      const l = layout(body), n = readField(body, field("steps"));
+      const want = euclid(readField(body, field("pulses")), n, readField(body, field("rotate")));
+      return want.some((on, i) => !!(body[l.gate + i] & 2) !== on);
+    });
+    expect(misses.map((m) => m.name)).toEqual([]);
+    expect(tracks.length).toBeGreaterThan(900);
   });
 });

@@ -1,7 +1,7 @@
 import { memo, useMemo, useState } from "react";
 import {
   Bytes, FIELDS, FieldDef, Project, Track as T1Track, addCycleRecord, channelMask, channels, copyTrack, field,
-  layout, readField, removeCycleRecord, removeTrack, setNotes, toggleStep, updateBody, updateTrack, writeField,
+  layout, readField, removeCycleRecord, removeTrack, setField, setNotes, toggleStep, updateBody, updateTrack, writeField,
 } from "../format";
 import { Button, DraftInput, Labeled, Select, intIn, listIn } from "./controls";
 import { noteName, parseNotes } from "./notes";
@@ -10,7 +10,7 @@ import { StepRow } from "./StepRow";
 const SHOWN = FIELDS.filter((f) => !["cycles", "channels"].includes(f.name));
 
 function FieldInput({ body, f, edit }: { body: Bytes; f: FieldDef; edit: (fn: (b: Bytes) => Bytes) => void }) {
-  const v = readField(body, f), set = (x: number) => edit((b) => writeField(b, f, x));
+  const v = readField(body, f), set = (x: number) => edit((b) => setField(b, f, x));
   return (
     <Labeled label={f.name} hint={f.partial} tone={f.partial ? "var(--partial)" : undefined}>
       {f.options

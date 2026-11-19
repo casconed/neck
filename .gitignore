@@ -43,3 +43,4 @@ yarn-error.*
 # T-1 files from your own device: never publish them
 fixtures/local/
 fixtures/expected/local__*
+.vitest/
