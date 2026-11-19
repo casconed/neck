@@ -35,3 +35,6 @@ input.num { width: 48px; }
 details.notice { color: var(--partial); font-size: 12px; }
 .pattern { display: flex; gap: 4px; align-items: center; }
 .pattern .active { border-color: var(--accent); color: var(--accent); }
+.draft { position: relative; display: inline-flex; }
+input.invalid { border-color: var(--warn); outline: 1px solid var(--warn); }
+.error-tip { position: absolute; top: 100%; left: 0; z-index: 1; white-space: nowrap; background: var(--panel); color: var(--warn); border: 1px solid var(--warn); padding: 1px 4px; font-size: 11px; }

@@ -4,10 +4,9 @@ import {
   layout, readField, removeCycleRecord, removeTrack, setNotes, toggleStep, updateBody, updateTrack, writeField,
 } from "../format";
 import { Button, DraftInput, Labeled, Select, intIn, listIn } from "./controls";
+import { noteName, parseNotes } from "./notes";
 import { StepRow } from "./StepRow";
 
-const NOTE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const noteName = (n: number) => NOTE[n % 12] + (Math.floor(n / 12) - 2); // T-1: 60 = C3
 const SHOWN = FIELDS.filter((f) => !["cycles", "channels"].includes(f.name));
 
 function FieldInput({ body, f, edit }: { body: Bytes; f: FieldDef; edit: (fn: (b: Bytes) => Bytes) => void }) {
@@ -46,14 +45,16 @@ export const TrackCard = memo(function TrackCard({ track, pi, ti, patterns, appl
     <div className={"track" + (track.mute ? " muted" : "")}>
       <div className="row">
         <strong>track {track.slot}</strong>
-        <Labeled label="notes">
-          <DraftInput label={`track ${track.slot} notes`} width={150} value={l.notes} format={(n) => n.join(",")}
-            parse={listIn(0, 127, 1, 8)} onCommit={(n) => act.edit((b) => setNotes(b, n))} />
+        <Labeled label="notes" hint="1-8 notes: numbers (60 = C3) or names like C3 F#4, separated by spaces or commas">
+          <DraftInput label={`track ${track.slot} notes`} width={150} value={l.notes} format={(n) => n.join(" ")}
+            parse={(t) => { const r = parseNotes(t); return typeof r === "string" ? { error: r } : { ok: r }; }}
+            onCommit={(n) => act.edit((b) => setNotes(b, n))} />
         </Labeled>
         <span className="dim">{l.notes.map(noteName).join(" ")}</span>
         <Labeled label="channels" hint="MIDI out channels, comma separated (blank = none)">
           <DraftInput label={`track ${track.slot} channels`} width={80} value={readField(body, field("channels"))}
-            format={(m) => channels(m).join(",")} parse={(t) => { const xs = t.trim() ? listIn(1, 16, 1, 16)(t) : []; return xs && channelMask(xs); }}
+            format={(m) => channels(m).join(",")}
+            parse={(t) => { if (!t.trim()) return { ok: 0 }; const r = listIn(1, 16, 1, 16)(t); return "error" in r ? r : { ok: channelMask(r.ok) }; }}
             onCommit={(m) => act.edit((b) => writeField(b, field("channels"), m))} />
         </Labeled>
         <Button label={track.mute ? "unmute" : "mute"} onPress={() => act.setMute(!track.mute)} />

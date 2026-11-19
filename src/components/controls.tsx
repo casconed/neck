@@ -15,36 +15,53 @@ export function Labeled({ label, hint, tone, children }: { label: string; hint?:
   );
 }
 
-/** Commits `parse(text)` when it returns a value, otherwise restores `format(value)`. */
+/** A parser returns the value, or a message saying why the text isn't valid. */
+export type Parse<T> = (t: string) => { ok: T } | { error: string };
+
+/**
+ * Commits on blur/Enter. Invalid text is never silently thrown away: it stays in the field,
+ * outlined, with the reason as a tooltip, until it's fixed or Escape restores the stored value.
+ */
 export function DraftInput<T>({ value, format, parse, onCommit, width = 48, label }: {
-  value: T; format: (v: T) => string; parse: (t: string) => T | undefined; onCommit: (v: T) => void; width?: number; label: string;
+  value: T; format: (v: T) => string; parse: Parse<T>; onCommit: (v: T) => void; width?: number; label: string;
 }) {
   const [draft, setDraft] = useState(format(value));
+  const [error, setError] = useState<string>();
   const [shown, setShown] = useState(value);
   if (shown !== value) { // reset during render (React's "adjust state from props" pattern), not in an effect
     setShown(value);
     setDraft(format(value));
+    setError(undefined);
   }
   const commit = () => {
-    const v = parse(draft);
-    if (v === undefined) setDraft(format(value));
-    else if (format(v) !== format(value)) onCommit(v);
+    const r = parse(draft);
+    if ("error" in r) { setError(r.error); return; }
+    setError(undefined);
+    if (format(r.ok) !== format(value)) onCommit(r.ok);
   };
   return (
-    <input className="num" aria-label={label} style={{ width }} value={draft}
-      onChange={(e) => setDraft(e.target.value)} onBlur={commit}
-      onKeyDown={(e) => { if (e.key === "Enter") commit(); }} />
+    <span className="draft">
+      <input className={"num" + (error ? " invalid" : "")} aria-label={label} aria-invalid={!!error} title={error}
+        style={{ width }} value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") { setDraft(format(value)); setError(undefined); }
+        }} />
+      {error && <span className="error-tip" role="alert">{error}</span>}
+    </span>
   );
 }
 
-export const intIn = (min: number, max: number) => (t: string) => {
+export const intIn = (min: number, max: number): Parse<number> => (t) => {
   const v = Number(t.trim());
-  return Number.isInteger(v) && v >= min && v <= max ? v : undefined;
+  return t.trim() && Number.isInteger(v) && v >= min && v <= max ? { ok: v } : { error: `enter a whole number from ${min} to ${max}` };
 };
 
-export const listIn = (min: number, max: number, minLen: number, maxLen: number) => (t: string) => {
-  const xs = t.split(",").map((x) => x.trim()).filter(Boolean).map(Number);
-  return xs.length >= minLen && xs.length <= maxLen && xs.every((x) => Number.isInteger(x) && x >= min && x <= max) ? xs : undefined;
+/** Numbers separated by commas and/or spaces. */
+export const listIn = (min: number, max: number, minLen: number, maxLen: number): Parse<number[]> => (t) => {
+  const xs = t.split(/[\s,]+/).filter(Boolean).map(Number);
+  if (xs.length < minLen || xs.length > maxLen) return { error: `enter ${minLen} to ${maxLen} numbers` };
+  return xs.every((x) => Number.isInteger(x) && x >= min && x <= max) ? { ok: xs } : { error: `numbers must be ${min} to ${max}` };
 };
 
 export function Select({ value, options, onChange, label }: {
