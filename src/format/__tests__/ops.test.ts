@@ -145,7 +145,15 @@ describe.each(banks.filter((b) => formXEnd(b.proj)))("bank ending in a Form X bl
 });
 
 describe("autosave -> bank", () => {
-  const autosaves = nonEmpty.filter((f) => f.proj.kind === "autosave");
+  // Real autosaves only exist in the gitignored fixtures/local, so CI also gets autosaves built from
+  // upstream bank patterns (same track blocks and trailer layout; device autosaves match bank patterns).
+  const fromBanks = nonEmpty.filter((f) => f.name.startsWith("upstream/") && f.proj.kind === "bank").slice(0, 5)
+    .map((f) => {
+      const p = patternsOf(f.proj)[0];
+      return { name: `${f.name} pattern ${p.slot + 1} as an autosave`, proj: reparse({ kind: "autosave", version: f.proj.version, pattern: { ...p, slot: -1 } }) };
+    });
+  const autosaves = [...nonEmpty.filter((f) => f.proj.kind === "autosave"), ...fromBanks];
+  it("has autosaves to test", () => expect(fromBanks.length).toBeGreaterThan(0));
   it.each(autosaves)("$name becomes a valid one-pattern bank, and can be put into another bank", ({ proj }) => {
     const bank = reparse(autosaveToBank(proj, 4, 99));
     expect(bank.kind).toBe("bank");
